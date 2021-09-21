@@ -151,7 +151,7 @@ class ClocStd(Peer):
             '''
             # create a list of peers that have let us download in the last 10 rounds
             friends = [] # will contain duplicates potentially but I think that's okay
-            for round in history.downloads:
+            for round in history.downloads[-10:]:
                 for download in round:
                     friends.append(download.from_id)
 
@@ -167,6 +167,10 @@ class ClocStd(Peer):
                         raise Exception("The requester is not in the passed list of peers.")
                     # units of this metric should be pieces/round
                     peer_uploadrate_proxy = len(set(peer.available_pieces))/history.current_round()
+                    #if r.requester_id in friends:
+                        # inflate the priority of friends while retaining the ordering of non-friends
+                        # this is an assumption that we make
+                        #peer_uploadrate_proxy = peer_uploadrate_proxy * 10
                     requester_rates[r.requester_id] = peer_uploadrate_proxy
             # sort the requesters by the value of their rates greatest --> least
             requester_rates_sorted = sorted(requester_rates.items(), key=lambda x: x[1], \
@@ -197,7 +201,7 @@ class ClocStd(Peer):
                 # if there are no sorted requestors, just continue to only unchoke one randomly
                 chosen = []
                 if sorted_requesters != []:
-                    for (requester_id, upload_rate) in sorted_requesters:
+                    for (requester_id, _upload_rate) in sorted_requesters:
                         chosen.append(requester_id)
                 
                 # determine the remaining choked requesters
@@ -205,10 +209,11 @@ class ClocStd(Peer):
                     requests))
                 # randomly unchoke a choked requester
                 try:
-                    random_request = random.choice(choked_requests) # subtract the prioritized ones
+                    #random_request = random.choice(choked_requests) # subtract the prioritized ones
+                    random_request = random.sample(choked_requests, 4-len(sorted_requesters))
                 except:
                     import pdb; pdb.set_trace();
-                randomly_chosen = [random_request.requester_id]
+                randomly_chosen = [r.requester_id for r in random_request]
                 chosen = chosen + randomly_chosen
                 # Evenly "split" my upload bandwidth among all chosen requestors
                 bws = even_split(self.up_bw, len(chosen))
