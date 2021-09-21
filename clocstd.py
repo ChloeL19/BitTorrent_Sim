@@ -146,31 +146,24 @@ class ClocStd(Peer):
         # helper function
         def sort_requesters():
             '''
-            Returns a sorted list of tuples [greatest --> least] of requester ids (keys) based on 
-            estimated upload rates (values). 
+            Returns a sorted list of tuples [greatest --> least] of (requester ids, upload rates).
+            Only computes these estimates for 10 rounds of history.
             '''
-            # create a list of peers that have let us download in the last 10 rounds
-            friends = [] # will contain duplicates potentially but I think that's okay
-            for round in history.downloads[-10:]:
+            # create a dict of peers that have let us download in the full history
+            friends = {} # key is peer id, value is number of blocks downloaded across all rounds
+            for round in history.downloads:
                 for download in round:
-                    friends.append(download.from_id)
+                    if download.from_id in friends.keys():
+                        friends[download.from_id] += download.blocks
+                    else:
+                        friends[download.from_id] = download.blocks
 
             # get upload speed estimates for all of the requesters
             requester_rates = {} # r.peer_id -> pieces/round
             for r in requests:
                 # use download rates as a proxy for upload rates
-                # get the corresponding peer object if someone worth reciprocating to
                 if r.requester_id in friends:
-                    try:
-                        peer = list(filter(lambda p: p.id == r.requester_id, peers))[0] #CONFIRM: okay to assume each peer ID only appears once in list?
-                    except:
-                        raise Exception("The requester is not in the passed list of peers.")
-                    # units of this metric should be pieces/round
-                    peer_uploadrate_proxy = len(set(peer.available_pieces))/history.current_round()
-                    #if r.requester_id in friends:
-                        # inflate the priority of friends while retaining the ordering of non-friends
-                        # this is an assumption that we make
-                        #peer_uploadrate_proxy = peer_uploadrate_proxy * 10
+                    peer_uploadrate_proxy = friends[r.requester_id]/len(history.downloads)
                     requester_rates[r.requester_id] = peer_uploadrate_proxy
             # sort the requesters by the value of their rates greatest --> least
             requester_rates_sorted = sorted(requester_rates.items(), key=lambda x: x[1], \
@@ -207,12 +200,8 @@ class ClocStd(Peer):
                 # determine the remaining choked requesters
                 choked_requests = list(filter(lambda x: x.requester_id not in set(chosen),\
                     requests))
-                # randomly unchoke a choked requester
-                try:
-                    #random_request = random.choice(choked_requests) # subtract the prioritized ones
-                    random_request = random.sample(choked_requests, 4-len(sorted_requesters))
-                except:
-                    import pdb; pdb.set_trace();
+                # randomly unchoke remaining choked requesters
+                random_request = random.sample(choked_requests, 4-len(sorted_requesters))
                 randomly_chosen = [r.requester_id for r in random_request]
                 chosen = chosen + randomly_chosen
                 # Evenly "split" my upload bandwidth among all chosen requestors
