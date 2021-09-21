@@ -52,7 +52,7 @@ class History:
         self.peer_ids = peer_ids[:]
 
         self.round_done = dict()   # peer_id -> round finished
-        self.downloads = dict((pid, []) for pid in peer_ids)
+        self.downloads = dict((pid, []) for pid in peer_ids) #key is peer and download is list 
         self.uploads = dict((pid, []) for pid in peer_ids)
 
     def update(self, dls, ups):
