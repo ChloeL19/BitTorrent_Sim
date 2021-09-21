@@ -61,46 +61,8 @@ class ClocStd(Peer):
                 if np in p.available_pieces:
                     peers_with_piece += 1
             av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array. 
-
-        #sort dict from rare to least rare
-        #arr = [] 
-        # make sure not longer than n
-        #list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
-
-        #for needp in list_key: 
-         #   for p in peers: 
-          #      if needp in peers.available_pieces
-           #     arr.append(p)
-
-        #shuffle all the needed pieces first 
-
-        #for p in peers: 
-         #   peers_with_piece = 0
-          #  for ap in p.available_pieces:
-           #     if ap in np_set: 
-            #        peers_with_piece += 1
-            #av_dict[p] = peers_with_piece
         
-        peers.sort(key=lambda p: p.id) ## old code- I want to sort on list_key
-
-        #import numpy as nup
-        #rank = nup.argsort(av_dict.values())
-        
-        #sort_dict = dict(sorted(av_dict.items(),key=lambda x:x[0],reverse = True))
-
-        #sorted_value_index = nup.argsort(av_dict.values())
-        #dictionary_keys = list(av_dict.keys())
-        #sort_dictionary = {dictionary_keys[i]:sorted(av_dict.values())[i] for i in range(len(dictionary_keys))}
-
-        #p= d.keys()[nup.argsort(d.values())[:]:]
-
-        # Sort peers by id.  This is probably not a useful sort, but other 
-        # which peers you go to first for your request- change to rarest first
-        ##SORT PIECES BY THEIR FREQUENCY AND YOU GET THIS BY LOOKING AT PEOPLE'S AVAILABILITY CLAIMS
-
-        ## data structure, allows us to track how many pieces other peers have of the ones that we need
-        ## loop through all the peers, count all of the pieces 
-        ## whichever one is the rarest of our pieces 
+        peers.sort(key=lambda p: p.id) ## I want to sort on list_key
 
         # request all available pieces from all peers!
         # (up to self.max_requests from each)
@@ -159,7 +121,7 @@ class ClocStd(Peer):
                         friends[download.from_id] = download.blocks
 
             # get upload speed estimates for all of the requesters
-            requester_rates = {} # r.peer_id -> pieces/round
+            requester_rates = {} # r.peer_id -> blocks/round, seems more granular
             for r in requests:
                 # use download rates as a proxy for upload rates
                 if r.requester_id in friends:
@@ -191,7 +153,7 @@ class ClocStd(Peer):
                 # otherwise return the sorted requesters
                 sorted_requesters = sort_requesters()[:3]
 
-                # if there are no sorted requestors, just continue to only unchoke one randomly
+                # if there are no sorted requestors, just continue to only unchoke requesters randomly
                 chosen = []
                 if sorted_requesters != []:
                     for (requester_id, _upload_rate) in sorted_requesters:
