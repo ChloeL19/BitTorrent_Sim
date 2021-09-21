@@ -132,11 +132,19 @@ class ClocTyrant(Peer):
 
             if round == 0: 
                 for peer in peers: 
-                    self. u = self.up_bw/self.S #4
+                    self.u = self.up_bw/self.S #4
                     self.d = self.up_bw/self.S
 
             div_dict = {k: float(self.d[k])/self.u[k] for k in self.d}
             sorted_peers = {k: v for k, v in sorted(div_dict.items(), key=lambda x: x[1])}
+            sum_up = 0 
+            kpeer = []
+            for peer in sorted_peers.keys(): 
+                if sum_up > capij:
+                    
+                    break 
+                sum_up += sorted_peers[peer]
+                kpeer.append(peer)
             #need to unchoke peers 1 to k for which 
 
             for pr in peers: 
