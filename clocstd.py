@@ -65,7 +65,7 @@ class ClocStd(Peer):
         #sort dict from rare to least rare
         #arr = [] 
         # make sure not longer than n
-        list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
+        #list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
 
         #for needp in list_key: 
          #   for p in peers: 
@@ -108,7 +108,7 @@ class ClocStd(Peer):
             av_set = set(peer.available_pieces)
             isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
             n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
-            il = [isect]# create isect list
+            il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
@@ -146,22 +146,28 @@ class ClocStd(Peer):
         # helper function
         def sort_requesters():
             '''
-            Returns a sorted dictionary [greatest --> least] of requester ids (keys) based on 
+            Returns a sorted list of tuples [greatest --> least] of requester ids (keys) based on 
             estimated upload rates (values). 
             '''
+            # create a list of peers that have let us download in the last 10 rounds
+            friends = [] # will contain duplicates potentially but I think that's okay
+            for round in history.downloads:
+                for download in round:
+                    friends.append(download.from_id)
+
             # get upload speed estimates for all of the requesters
             requester_rates = {} # r.peer_id -> pieces/round
             for r in requests:
                 # use download rates as a proxy for upload rates
-                p_history = history.peer_history(r.requester_id)
-                # get the corresponding peer object
-                try:
-                    peer = list(filter(lambda p: p.id == r.requester_id, peers))[0] #CONFIRM: okay to assume each peer ID only appears once in list?
-                except:
-                    raise Exception("The requester is not in the passed list of peers.")
-                # units of this metric should be pieces/round
-                peer_uploadrate_proxy = len(set(peer.available_pieces))/p_history.current_round()
-                requester_rates[r.id] = peer_uploadrate_proxy
+                # get the corresponding peer object if someone worth reciprocating to
+                if r.requester_id in friends:
+                    try:
+                        peer = list(filter(lambda p: p.id == r.requester_id, peers))[0] #CONFIRM: okay to assume each peer ID only appears once in list?
+                    except:
+                        raise Exception("The requester is not in the passed list of peers.")
+                    # units of this metric should be pieces/round
+                    peer_uploadrate_proxy = len(set(peer.available_pieces))/history.current_round()
+                    requester_rates[r.requester_id] = peer_uploadrate_proxy
             # sort the requesters by the value of their rates greatest --> least
             requester_rates_sorted = sorted(requester_rates.items(), key=lambda x: x[1], \
                 reverse=True)
@@ -178,33 +184,34 @@ class ClocStd(Peer):
             self.dummy_state["cake"] = "pie"
 
             # assumption: if only four requestors, just unchoke those four and split bandwidth evenly
-            if len(requests <= 4):
+            if len(set([x.requester_id for x in requests])) <= 4:
                 # get list of ids from this list, these are the chosen
                 chosen = []
                 for r in requests:
                     chosen.append(r.requester_id)
-                bws = even_split(self.up_bw, len(chosen))
+                bws = even_split(self.up_bw, len(set(chosen))) # use set to remove duplicates
             else:
                 # otherwise return the sorted requesters
-                sorted_requesters = sort_requesters()
+                sorted_requesters = sort_requesters()[:3]
 
+                # if there are no sorted requestors, just continue to only unchoke one randomly
                 chosen = []
-                for (requester, upload_rate) in sorted_requesters:
-                    chosen.append(requester.requester_id)
+                if sorted_requesters != []:
+                    for (requester_id, upload_rate) in sorted_requesters:
+                        chosen.append(requester_id)
                 
-                bws = even_split(self.up_bw, len(chosen))
-
                 # determine the remaining choked requesters
-                choked_requests = list(filter(lambda x: x.requester_id not in set(sorted_requesters.keys()),\
+                choked_requests = list(filter(lambda x: x.requester_id not in set(chosen),\
                     requests))
-
-                # randomly unchoke a requester
-                random_request = random.choice(choked_requests) # subtract the prioritized ones
+                # randomly unchoke a choked requester
+                try:
+                    random_request = random.choice(choked_requests) # subtract the prioritized ones
+                except:
+                    import pdb; pdb.set_trace();
                 randomly_chosen = [random_request.requester_id]
                 chosen = chosen + randomly_chosen
-                # Evenly "split" my upload bandwidth among the one chosen requester
-                random_bws = even_split(self.up_bw, len(randomly_chosen))
-                bws = bws + random_bws
+                # Evenly "split" my upload bandwidth among all chosen requestors
+                bws = even_split(self.up_bw, len(chosen))
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
