@@ -23,6 +23,7 @@ class ClocTyrant(Peer):
         self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
         self.alpha = 0.2
         self.r = 3 
+        self.S = 4
     
     def requests(self, peers, history):
         """
@@ -124,11 +125,12 @@ class ClocTyrant(Peer):
             # Evenly "split" my upload bandwidth among the one chosen requester
             bws = even_split(self.up_bw, len(chosen))
 
+            ## NEW CODE STARTS HERE
         + #list of what round it is and how much given in total- average - this should be dynamic upload rate 
             #based on average download rate of standard clients 
             capij = self.up_bw #is this max??
 
-            if round = 0: 
+            if round == 0: 
                 for peer in peers: 
                     self. u = self.up_bw/self.S #4
                     self.d = self.up_bw/self.S

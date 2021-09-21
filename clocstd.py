@@ -105,6 +105,8 @@ class ClocStd(Peer):
         # has a list of Download objects for each Download to this peer in
         # the previous round.
 
+        # FIXME: consider holding randomly unchoked agents for three rounds
+
         # helper function
         def sort_requesters():
             '''
