@@ -61,7 +61,7 @@ class ClocStd(Peer):
                 if np in p.available_pieces:
                     peers_with_piece += 1
             av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array. 
-        
+
         peers.sort(key=lambda p: p.id) ## I want to sort on list_key
 
         # request all available pieces from all peers!
@@ -174,3 +174,6 @@ class ClocStd(Peer):
                    for (peer_id, bw) in zip(chosen, bws)]
             
         return uploads
+
+
+## assumption: if a peer makes multiple requests, assume it doesn't matter which one is fulfilled. 

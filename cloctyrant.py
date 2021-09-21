@@ -18,6 +18,11 @@ class ClocTyrant(Peer):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
+        self.d  = {}#big dictionary of keys with their respective rates --> how to initialize it by 10
+        self.u = {}
+        self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
+        self.alpha = 0.2
+        self.r = 3 
     
     def requests(self, peers, history):
         """
@@ -48,6 +53,16 @@ class ClocTyrant(Peer):
         # Symmetry breaking is good...
         random.shuffle(needed_pieces)
         
+        av_dict = {} # count of other peers with this piece
+        
+        for np in np_set: 
+            peers_with_piece = 0
+            for p in peers:
+                if np in p.available_pieces:
+                    peers_with_piece += 1
+            av_dict[np] = peers_with_piece
+
+
         # Sort peers by id.  This is probably not a useful sort, but other 
         # sorts might be useful
         peers.sort(key=lambda p: p.id)
@@ -55,12 +70,15 @@ class ClocTyrant(Peer):
         # (up to self.max_requests from each)
         for peer in peers:
             av_set = set(peer.available_pieces)
-            isect = av_set.intersection(np_set)
-            n = min(self.max_requests, len(isect))
-            # More symmetry breaking -- ask for random pieces.
+            isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
+            n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
+            il = [isect]# create isect list
+            random.shuffle(il)# randomly shuffle isect list
+            sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
+
             # This would be the place to try fancier piece-requesting strategies
-            # to avoid getting the same thing from multiple peers at a time.
-            for piece_id in random.sample(isect, n):
+            # to avoid getting the same thing from multiple peers at a time. ADD HERE
+            for piece_id in random.sample(il, n): #DO YOU MEAN CHANGING THIS???
                 # aha! The peer has this piece! Request it.
                 # which part of the piece do we need next?
                 # (must get the next-needed blocks in order)
@@ -70,8 +88,9 @@ class ClocTyrant(Peer):
 
         return requests
 
-#dynamically adjust upload slots, unchoke based on unload and download speed, not equal-split policy, upload at min rate 
-
+#dynamically adjust upload slots, unchoke based on unload and download speed, not equal-split policy, upload at min rate- upload rate increases if they don't reciprocate  
+#unchoking everyone for which our upload capacity value is less than total capacity
+#how many people i unchoke is how much given 
     def uploads(self, requests, peers, history):
         """
         requests -- a list of the requests for this peer for this round
@@ -104,6 +123,30 @@ class ClocTyrant(Peer):
             chosen = [request.requester_id]
             # Evenly "split" my upload bandwidth among the one chosen requester
             bws = even_split(self.up_bw, len(chosen))
+
+        + #list of what round it is and how much given in total- average - this should be dynamic upload rate 
+            #based on average download rate of standard clients 
+            capij = self.up_bw #is this max??
+
+            if round = 0: 
+                for peer in peers: 
+                    self. u = self.up_bw/self.S #4
+                    self.d = self.up_bw/self.S
+
+            div_dict = {k: float(self.d[k])/self.u[k] for k in self.d}
+            sorted_peers = {k: v for k, v in sorted(div_dict.items(), key=lambda x: x[1])}
+            #need to unchoke peers 1 to k for which 
+
+            for pr in peers: 
+                downhist = history.download[round - 1]
+                if pr in downhist.keys(): 
+                    SOMETHING 
+                elif round => self.r: #greater than r: 
+                    self.u = (1 + self.alpha)self.u
+                #upload_hist = self.uploads[round - 1]
+                #upload_hist.keys()
+                else:#the number of times been unchoked less than 3- download rate is rate from last round i think: 
+                    self.d = download
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
