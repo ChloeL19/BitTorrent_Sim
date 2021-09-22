@@ -183,7 +183,7 @@ class ClocTyrant(Peer):
                     # I worked out this math . . . image of logic attached in the write-up
                     # denominator of previous rate value will always be current_round-1
                     # I want to add the rate in blocks/round to the old rate in order to update the download rate
-                    # I recognize the simpler method is to say: self.peer_ratios[pid]["d"] = total_blocks/round
+                    # I recognize the simpler method is to say: self.peer_ratios[pid]["d"] = total_blocks/(round - 1)
                     # this experimentally did not make a big difference in performance, though
                     # so for the sake of my pride I am keeping the more complicated version here
                 if unchoked_metr_bool:
