@@ -118,7 +118,7 @@ class Dummy(Peer):
             # Evenly "split" my upload bandwidth among the one chosen requester
             #bws = even_split(self.up_bw, len(chosen)) # get rid of this line?
 
-
+            #CHECK UNITS 
             down_hist = history.downloads[round -1] 
             req = set(request.requester_id)
             sect_id = req.intersection(set(down_hist.keys()))
@@ -126,10 +126,13 @@ class Dummy(Peer):
             new_bws = []
             for int_id in sect_id: 
                 totals += len(down_hist[int_id])
+
             for peer in down_hist.keys():
                 if peer in sect_id: 
                     allocate_bw = len(down_hist[peer])/totals * 0.9 #don't hardcode- what do we want to set the value to? also are these all floats
                     new_bws.append(self.up_bw * allocate_bw)
+
+                    #checking for when requests is 0, checking if download history ( I didn't download from anyone) is greater than 0 and length is greater than 0, in case first round optimistically unchoke everyone
 
 
         ##how to allocate that 10% optimistic unchoking 
