@@ -80,7 +80,6 @@ class Dummy(Peer):
 
         In each round, this will be called after requests().
         """
-
         round = history.current_round()
         logging.debug("%s again.  It's round %d." % (
             self.id, round))
@@ -88,6 +87,12 @@ class Dummy(Peer):
         # For example, history.downloads[round-1] (if round != 0, of course)
         # has a list of Download objects for each Download to this peer in
         # the previous round.
+
+        #download objects of the previous round 
+        #calculate bandwidth based on what downloads were 
+        # list of downloads that have and allocate downloads this way
+
+
 
         if len(requests) == 0:
             logging.debug("No one wants my pieces!")
@@ -98,10 +103,26 @@ class Dummy(Peer):
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
 
-            request = random.choice(requests)
-            chosen = [request.requester_id]
+            request = random.choice(requests) # what is this saying, should my sect_id use this?
+            chosen = [request.requester_id] # change this i think to intersection of peer ids -> [sect_id]
             # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+            bws = even_split(self.up_bw, len(chosen)) # get rid of this line?
+
+
+        down_hist = history.downloads[round -1] 
+        req = set(request.requester_id)
+        sect_id = req.intersection(set(down_hist.keys()))
+        totals = 0 
+        new_bws = []
+        for int_id in sect_id: 
+            totals += len(down_hist[int_id])
+        for peer in down_hist.keys():
+            if peer in sect_id: 
+                allocate_bw = len(down_hist[peer])/totals * 0.9 #don't hardcode- what do we want to set the value to? also are these all floats
+                new_bws.append(self.up_bw * allocate_bw)
+
+
+        ##how to allocate that 10% optimistic unchoking 
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)

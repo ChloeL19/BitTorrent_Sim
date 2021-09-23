@@ -70,6 +70,8 @@ class Dummy(Peer):
 
         return requests
 
+#dynamically adjust upload slots, unchoke based on unload and download speed, not equal-split policy, upload at min rate 
+
     def uploads(self, requests, peers, history):
         """
         requests -- a list of the requests for this peer for this round
