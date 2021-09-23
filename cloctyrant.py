@@ -137,6 +137,7 @@ class ClocTyrant(Peer):
             bws = []
             sum_up = 0
             counter = 0
+            # FIXME: STILL EXCEEDING BANDWIDTH HERE!!!
             while sum_up < self.up_bw and \
                 counter < len(requester_ratios_sorted):
                 pid = requester_ratios_sorted[counter][0]
@@ -188,7 +189,6 @@ class ClocTyrant(Peer):
                     # so for the sake of my pride I am keeping the more complicated version here
                 if unchoked_metr_bool:
                     self.peer_ratios[pid]["u"] *= (1 - self.gamma)
-
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
