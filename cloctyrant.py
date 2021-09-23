@@ -119,7 +119,7 @@ class ClocTyrant(Peer):
                         if rnd != []:
                             blocks_uploaded_lst += [u.bw for u in rnd if u.to_id == r.requester_id]
                     # initialize values of u and d
-                    self.peer_ratios[r.requester_id] = {"u": 1, "d": 1}
+                    self.peer_ratios[r.requester_id] = {"u": 1, "d": 1} # previously 1
                     if len(blocks_uploaded_lst) != 0:
                         self.peer_ratios[r.requester_id]["u"] = (len(blocks_uploaded_lst)/round)/4
                         self.peer_ratios[r.requester_id]["d"] = (len(blocks_uploaded_lst)/round)/4
@@ -138,6 +138,7 @@ class ClocTyrant(Peer):
             sum_up = 0
             counter = 0
             # FIXME: STILL EXCEEDING BANDWIDTH HERE!!!
+            #import pdb; pdb.set_trace();
             while sum_up < self.up_bw and \
                 counter < len(requester_ratios_sorted):
                 pid = requester_ratios_sorted[counter][0]
@@ -160,7 +161,7 @@ class ClocTyrant(Peer):
                 lost_bw = bws.pop()
                 while lost_bw < (sum_up - self.up_bw) and bws != []:
                     lost_bw = bws.pop()
-                bws[0] += sum_up - self.up_bw
+                #bws[0] += math.floor(sum_up - self.up_bw)
 
             # update the estimates of upload and download rates
             for (pid, _rate_dict) in self.peer_ratios.items():
