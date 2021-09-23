@@ -53,7 +53,7 @@ class Dummy(ClocStd):
         #NO FREQUENCY ESTIMATION
         #REQUEST FILES OWNED BY FEW PEOPLE
         random.shuffle(needed_pieces)
-        #av_dict = {} # count of other peers with this piece
+        av_dict = {} # count of other peers with this piece
         
         for np in np_set: 
             peers_with_piece = 0
@@ -65,7 +65,8 @@ class Dummy(ClocStd):
         #sort dict from rare to least rare
         #arr = [] 
         # make sure not longer than n
-        list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
+        #list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
+        #sort = sorted(av_dict.items(), key=lambda x: x[1], reverse=True)
 
         #for needp in list_key: 
          #   for p in peers: 
@@ -97,8 +98,6 @@ class Dummy(ClocStd):
         # Sort peers by id.  This is probably not a useful sort, but other 
         # which peers you go to first for your request- change to rarest first
         ##SORT PIECES BY THEIR FREQUENCY AND YOU GET THIS BY LOOKING AT PEOPLE'S AVAILABILITY CLAIMS
-        peers.sort(key=lambda p: p.id)
-
 
         ## data structure, allows us to track how many pieces other peers have of the ones that we need
         ## loop through all the peers, count all of the pieces 
@@ -168,3 +167,6 @@ class Dummy(ClocStd):
                    for (peer_id, bw) in zip(chosen, bws)]
             
         return uploads
+
+
+## assumption: if a peer makes multiple requests, assume it doesn't matter which one is fulfilled. 
