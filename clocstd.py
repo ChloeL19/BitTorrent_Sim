@@ -13,11 +13,10 @@ from messages import Upload, Request
 from util import even_split
 from peer import Peer
 
+class ClocStd(Peer):
 # rarest first (lowest availability) 
 #reciprocation (reciprocation probability- peer j will unchoke i for a particular choice of upload bandwidth offered by i- depend on the behaviour of other peers)
 #optimistic unchoking (every 30 seconds an additional slot to a random peer in the neighbourhood)
-
-class Dummy(ClocStd):
     def post_init(self):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
@@ -50,6 +49,7 @@ class Dummy(ClocStd):
 
         requests = []   # We'll put all the things we want here
         # Symmetry breaking is good...
+
         #NO FREQUENCY ESTIMATION
         #REQUEST FILES OWNED BY FEW PEOPLE
         random.shuffle(needed_pieces)
@@ -62,47 +62,7 @@ class Dummy(ClocStd):
                     peers_with_piece += 1
             av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array. 
 
-        #sort dict from rare to least rare
-        #arr = [] 
-        # make sure not longer than n
-        #list_key = sorted(av_dict, key=d.get) # make sure list of pieces in order of frequency 
-        #sort = sorted(av_dict.items(), key=lambda x: x[1], reverse=True)
-
-        #for needp in list_key: 
-         #   for p in peers: 
-          #      if needp in peers.available_pieces
-           #     arr.append(p)
-
-#shuffle all the needed pieces first 
-
-        #for p in peers: 
-         #   peers_with_piece = 0
-          #  for ap in p.available_pieces:
-           #     if ap in np_set: 
-            #        peers_with_piece += 1
-            #av_dict[p] = peers_with_piece
-        
-        peers.sort(key=lambda p: p.id) ## old code- I want to sort on list_key
-
-        #import numpy as nup
-        #rank = nup.argsort(av_dict.values())
-        
-        #sort_dict = dict(sorted(av_dict.items(),key=lambda x:x[0],reverse = True))
-
-        #sorted_value_index = nup.argsort(av_dict.values())
-        #dictionary_keys = list(av_dict.keys())
-        #sort_dictionary = {dictionary_keys[i]:sorted(av_dict.values())[i] for i in range(len(dictionary_keys))}
-
-        #p= d.keys()[nup.argsort(d.values())[:]:]
-
-        # Sort peers by id.  This is probably not a useful sort, but other 
-        # which peers you go to first for your request- change to rarest first
-        ##SORT PIECES BY THEIR FREQUENCY AND YOU GET THIS BY LOOKING AT PEOPLE'S AVAILABILITY CLAIMS
-
-        ## data structure, allows us to track how many pieces other peers have of the ones that we need
-        ## loop through all the peers, count all of the pieces 
-        ## whichever one is the rarest of our pieces 
-
+        peers.sort(key=lambda p: p.id) ## I want to sort on list_key
 
         # request all available pieces from all peers!
         # (up to self.max_requests from each)
@@ -110,7 +70,7 @@ class Dummy(ClocStd):
             av_set = set(peer.available_pieces)
             isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
             n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
-            il = [isect]# create isect list
+            il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
@@ -126,9 +86,6 @@ class Dummy(ClocStd):
 
         return requests
 
-
-`## implement optimistic unchoking 
-## implement reciprocation --> assumptions to make as it depends on the behaviours of other peers`
     def uploads(self, requests, peers, history):
         """
         requests -- a list of the requests for this peer for this round
@@ -148,6 +105,34 @@ class Dummy(ClocStd):
         # has a list of Download objects for each Download to this peer in
         # the previous round.
 
+        # helper function
+        def sort_requesters():
+            '''
+            Returns a sorted list of tuples [greatest --> least] of (requester ids, upload rates).
+            Only computes these estimates for 10 rounds of history.
+            '''
+            # create a dict of peers that have let us download in the full history
+            friends = {} # key is peer id, value is number of blocks downloaded across all rounds
+            for round in history.downloads:
+                for download in round:
+                    if download.from_id in friends.keys():
+                        friends[download.from_id] += download.blocks
+                    else:
+                        friends[download.from_id] = download.blocks
+
+            # get upload speed estimates for all of the requesters
+            requester_rates = {} # r.peer_id -> blocks/round, seems more granular
+            for r in requests:
+                # use download rates as a proxy for upload rates
+                if r.requester_id in friends:
+                    peer_uploadrate_proxy = friends[r.requester_id]/len(history.downloads)
+                    requester_rates[r.requester_id] = peer_uploadrate_proxy
+            # sort the requesters by the value of their rates greatest --> least
+            requester_rates_sorted = sorted(requester_rates.items(), key=lambda x: x[1], \
+                reverse=True)
+            return requester_rates_sorted
+        
+        # reciprocation and optimistic unchoking
         if len(requests) == 0:
             logging.debug("No one wants my pieces!")
             chosen = []
@@ -157,10 +142,32 @@ class Dummy(ClocStd):
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
 
-            request = random.choice(requests)
-            chosen = [request.requester_id]
-            # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+            # assumption: if only four requestors, just unchoke those four and split bandwidth evenly
+            if len(set([x.requester_id for x in requests])) <= 4:
+                # get list of ids from this list, these are the chosen
+                chosen = []
+                for r in requests:
+                    chosen.append(r.requester_id)
+                bws = even_split(self.up_bw, len(set(chosen))) # use set to remove duplicates
+            else:
+                # otherwise return the sorted requesters
+                sorted_requesters = sort_requesters()[:3]
+
+                # if there are no sorted requestors, just continue to only unchoke requesters randomly
+                chosen = []
+                if sorted_requesters != []:
+                    for (requester_id, _upload_rate) in sorted_requesters:
+                        chosen.append(requester_id)
+                
+                # determine the remaining choked requesters
+                choked_requests = list(filter(lambda x: x.requester_id not in set(chosen),\
+                    requests))
+                # randomly unchoke remaining choked requesters
+                random_request = random.sample(choked_requests, 4-len(sorted_requesters))
+                randomly_chosen = [r.requester_id for r in random_request]
+                chosen = chosen + randomly_chosen
+                # Evenly "split" my upload bandwidth among all chosen requestors
+                bws = even_split(self.up_bw, len(chosen))
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
