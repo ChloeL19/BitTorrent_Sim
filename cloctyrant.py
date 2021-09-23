@@ -135,6 +135,7 @@ class Dummy(Peer):
 
             div_dict = {k: float(self.d[k])/self.u[k] for k in self.d}
             sorted_peers = {k: v for k, v in sorted(div_dict.items(), key=lambda x: x[1])}
+            #need to unchoke peers 1 to k for which 
 
             for pr in peers: 
                 downhist = history.download[round - 1]
