@@ -139,7 +139,7 @@ class ClocTyrant(Peer):
             kpeer = []
             for peer in sorted_peers.keys(): 
                 if sum_up > capij:
-                    
+
                     break 
                 sum_up += sorted_peers[peer]
                 kpeer.append(peer)
