@@ -119,7 +119,7 @@ class Dummy(Peer):
 
             #CHECK UNITS 
             down_hist = history.downloads[round -1] 
-            req = set(request.requester_id)#CHECK IF THIS IS ONLY ONE ID
+            req = set([r.requester_id for r in requests])#CHECK IF THIS IS ONLY ONE ID
             sect_id = req.intersection(set(down_hist.keys()))
             totals = 0 
             new_bws = []
