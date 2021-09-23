@@ -114,7 +114,7 @@ class Dummy(Peer):
             self.dummy_state["cake"] = "pie"
 
             request = random.choice(requests) # what is this saying, should my sect_id use this?
-            chosen = [request.requester_id] # change this i think to intersection of peer ids -> [sect_id]
+            #chosen = [request.requester_id] # change this i think to intersection of peer ids -> [sect_id]
             # Evenly "split" my upload bandwidth among the one chosen requester
 
             #CHECK UNITS 
@@ -123,25 +123,36 @@ class Dummy(Peer):
             sect_id = req.intersection(set(down_hist.keys()))
             totals = 0 
             new_bws = []
+            chosen = []
+            non = []
 
+            if round == 0 | down_hist == {} | len(requests) == 0:
+                chosen = peers #is it peers or r.requester_id for r in requests
+                bws = even_split(self.up_bw, len(chosen))
             for int_id in sect_id: 
                 totals += len(down_hist[int_id])
-            if round == 0 | down_hist == [] | len(requests) == 0:
-                chosen = peers 
-                bws = even_split(self.up_bw, len(chosen))
             for peer in down_hist.keys():
                 if peer in sect_id: 
                     allocate_bw = int((len(down_hist[peer])/totals) * 0.9) #don't hardcode- what do we want to set the value to? also are these all floats
                     new_bws.append(self.up_bw * allocate_bw)
-            #CHOOSE PEER NOT IN SECT ID AND ALLOCATE --> opt_bw = int(0.1 * self.up_vw) new_bws.append(opt_bw)
+                    chosen.append(peer)
+                else: 
+                    non.append(peer)
+
+            ## do you think peer in chosen and bandwidths will correspond to each other as 
+            ## they are added to diff parts 
+            op_id = random.choice(non)
+            chosen.append(op_id)
+            opt_bw = int(0.1 * self.up_bw) 
+            new_bws.append(opt_bw)
 
     #checking for when requests is 0, checking if download history ( I didn't download from anyone) is greater than 0 and length (length of current requests) is greater than 0, in case first round optimistically unchoke everyone
     #there is no requesters or the previous round had no downloads. 
     #check if download history greater than 0 - if i didn't download from anyone in previous round 
 
-    ##how to allocate that 10% optimistic unchoking 
-
     # create actual uploads out of the list of peer ids and bandwidths
+    #bws --> new_bws
+    #chosen --> chosen  
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
             
