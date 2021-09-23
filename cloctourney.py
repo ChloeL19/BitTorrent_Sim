@@ -18,6 +18,11 @@ class ClocTourney(Peer):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
+        self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
+        self.alpha = 0.2
+        self.r = 3 
+        self.S = 4
+        self.peer_ratios = {} # keys: peer ids, values: {"u": upload rate, "d": download rate}
     
     def requests(self, peers, history):
         """
@@ -108,6 +113,9 @@ class ClocTourney(Peer):
             logging.debug("Still here: uploading to a random peer")
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
+
+
+
 
             request = random.choice(requests)
             chosen = [request.requester_id]
