@@ -13,7 +13,7 @@ from messages import Upload, Request
 from util import even_split
 from peer import Peer
 
-class Dummy(Peer):
+class ClocPropShare(Peer):
     def post_init(self):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
@@ -64,7 +64,7 @@ class Dummy(Peer):
             av_set = set(peer.available_pieces)
             isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
             n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
-            il = [isect]# create isect list
+            il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
@@ -118,26 +118,47 @@ class Dummy(Peer):
             # Evenly "split" my upload bandwidth among the one chosen requester
 
             #CHECK UNITS 
-            down_hist = history.downloads[round -1] 
-            req = set([r.requester_id for r in requests])#CHECK IF THIS IS ONLY ONE ID
-            sect_id = req.intersection(set(down_hist.keys()))
+            down_hist = history.downloads[round - 1] 
             totals = 0 
             new_bws = []
             chosen = []
-            non = []
+            non_share = []
+            d_id = []
+            for d in down_hist: 
+                d_id.append(d.from_id)
+            req = set([r.requester_id for r in requests])
+            sect_id = req.intersection(set(d_id))
 
-            if round == 0 | down_hist == {} | len(requests) == 0:
+
+            if round == 0 or d_id == [] or len(requests) == 0:
                 chosen = peers #is it peers or r.requester_id for r in requests
                 bws = even_split(self.up_bw, len(chosen))
-            for int_id in sect_id: 
-                totals += len(down_hist[int_id])
-            for peer in down_hist.keys():
-                if peer in sect_id: 
-                    allocate_bw = int((len(down_hist[peer])/totals) * 0.9) #don't hardcode- what do we want to set the value to? also are these all floats
-                    new_bws.append(self.up_bw * allocate_bw)
-                    chosen.append(peer)
-                else: 
-                    non.append(peer)
+            
+
+
+
+
+
+
+
+            down_hist = history.downloads[round - 1] 
+            totals = 0 
+            new_bws = []
+            chosen = []
+            non_share = []
+            req = [r.requester_id for r in requests]
+            for d in down_hist: 
+                if d.from_id in req: 
+                    totals += d.blocks
+                else: non_share.append(d.from_id)
+            if round == 0 or down_hist == [] or len(requests) == 0:
+                chosen = peers #is it peers or r.requester_id for r in requests
+                bws = even_split(self.up_bw, len(chosen))
+            for peer in down_hist:
+                allocate_bw = int((peer.blocks/totals) * 0.9) #don't hardcode- what do we want to set the value to? also are these all floats
+                new_bws.append(self.up_bw * allocate_bw)
+                chosen.append(peer)
+
 
             ## do you think peer in chosen and bandwidths will correspond to each other as 
             ## they are added to diff parts 
