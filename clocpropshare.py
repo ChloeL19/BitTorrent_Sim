@@ -83,101 +83,6 @@ class ClocPropShare(Peer):
         print("hi", requests)
         return requests
 
-    def uploads(self, requests, peers, history):
-        """
-        requests -- a list of the requests for this peer for this round
-        peers -- available info about all the peers
-        history -- history for all previous rounds
-
-        returns: list of Upload objects.
-
-        In each round, this will be called after requests().
-        """
-        round = history.current_round()
-        logging.debug("%s again.  It's round %d." % (
-            self.id, round))
-        # One could look at other stuff in the history too here.
-        # For example, history.downloads[round-1] (if round != 0, of course)
-        # has a list of Download objects for each Download to this peer in
-        # the previous round.
-
-        #download objects of the previous round 
-        #calculate bandwidth based on what downloads were 
-        # list of downloads that have and allocate downloads this way
-
-
-
-        if len(requests) == 0:
-            logging.debug("No one wants my pieces!")
-            chosen = []
-            bws = []
-        else:
-            logging.debug("Still here: uploading to a random peer")
-            # change my internal state for no reason
-            self.dummy_state["cake"] = "pie"
-
-            request = random.choice(requests) # what is this saying, should my sect_id use this?
-            #chosen = [request.requester_id] # change this i think to intersection of peer ids -> [sect_id]
-
-            #CHECK UNITS 
-            down_hist = history.downloads[round - 1] 
-            totals = 0 
-            chosen = []
-            #list of requesters not in downloaders
-            non_share = []
-            #list of all shared requesters and downloaders
-            d_id = []
-            #list of requester ids
-            req = [r.requester_id for r in requests]
-
-            ##calculate denominator: total blocks, make list of shared peer_id in download and request
-            for d in down_hist: 
-                if d.from_id in req: 
-                    totals += d.blocks
-                    d_id.append(d)
-            
-            #if round 0, no requests, denominator 0, download is nothing
-            if  round == 0  or down_hist == [] or totals == 0 or d_id == []:
-                print("-----Checking if statement now--------")
-                print(round)
-                print(down_hist)
-                print(totals)
-                print(d_id)
-                chosen = [random.sample([r.requester_id for r in requests], min(len(requests), 4))] #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
-                bws = even_split(self.up_bw, len(chosen))
-            else: 
-                import pdb; pdb.set_trace();
-                for peer in down_hist:
-                    if peer.from_id in req: 
-                        # check if peer a requester 
-                        allocate_bw = (peer.blocks/totals) * 0.9 #don't hardcode- what do we want to set the value to? also are these all floats
-                        bws.append(math.floor(self.up_bw * allocate_bw))
-                        chosen.append(peer.from_id)
-                        import pdb; pdb.set_trace();
-
-            #optimistically unchoke 
-                for r in req: 
-                    if r not in d_id:
-                     non_share.append(r)
-            #what is non_share is empty 
-                if non_share != []:
-                    op_id = random.choice(non_share)
-                    chosen.append(op_id)
-                    opt_bw = math.floor(0.1 * self.up_bw)
-                    bws.append(opt_bw)
-
-                if sum(bws) > self.up_bw:
-                    import pdb; pdb.set_trace();
-
-        uploads = [Upload(self.id, peer_id, bw)
-                   for (peer_id, bw) in zip(chosen, bws)]
-        print(requests)
-        print(uploads)
-        print(self.up_bw)
-        print(sum(bws))
-        return uploads
-
-
 
     def uploads(self, requests, peers, history):
         """
@@ -202,21 +107,27 @@ class ClocPropShare(Peer):
             logging.debug("No one wants my pieces!")
             chosen = []
             bws = []
+            print("OOOOOOOOOOOOOOOO")
         else:
             logging.debug("Still here: uploading to a random peer")
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
 
-            request = random.choice(requests)
-            chosen = [request.requester_id]
+            #request = random.choice(requests)
+            chosen = []
+            bws= []
             # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+            #bws = even_split(self.up_bw, len(chosen))
 
             requester_l = [r.requester_id for r in requests]
             last_round = history.downloads[round-1]
             non_share = []
+            print("------------------------")
+            print(sum([o.blocks for o in last_round]))
+            #sum([o.blocks for o in last_round] ==0
 
-            if round == 0 or list(set(requester_l) & set(ob.from_id for ob in last_round)): 
+            if round == 0 or list(set(requester_l) & set(ob.from_id for ob in last_round)) == [] : 
+                print("############")
                 chosen = [random.sample([r.requester_id for r in requests], min(len(requests), 4))] #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
                 bws = even_split(self.up_bw, len(chosen)) 
             else: 
@@ -233,5 +144,8 @@ class ClocPropShare(Peer):
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
-            
+        print(requests)
+        print(uploads)
+        print(self.up_bw)
+        print(sum(bws))
         return uploads
