@@ -112,21 +112,18 @@ class ClocPropShare(Peer):
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
 
+            #request = random.choice(requests)
             chosen = []
             bws= []
+            # Evenly "split" my upload bandwidth among the one chosen requester
+            #bws = even_split(self.up_bw, len(chosen))
 
             requester_l = [r.requester_id for r in requests]
-            print("###########")
-            print(requester_l)
             last_round = history.downloads[round-1]
-            print(history.downloads[round-1])
             non_share = []
 
             #if round is 0 or no intersection between last round downloaders and requesters
             if round == 0 or list(set(requester_l) & set([ob.from_id for ob in last_round])) == []: 
-                print("---------------------------")
-                print(round)
-                print(list(set(requester_l) & set(ob.from_id for ob in last_round)))
                 chosen = random.sample([r.requester_id for r in requests], min(len(requests), 4)) #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
                 bws = even_split(self.up_bw, len(chosen)) 
                 #import pdb; pdb.set_trace();
@@ -143,12 +140,11 @@ class ClocPropShare(Peer):
                 if non_share != []: 
                     chosen.append(random.choice(non_share))
                     bws.append(math.floor(0.1*self.up_bw))
-
+        
+        if sum(bws)<self.up_bw and sum(bws) != 0: 
+            val = math.floor((self.up_bw - sum(bws))/len(bws))
+            bws = [x + val for x in bws]
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
-        print(requests)
-        print(uploads)
-        print(self.up_bw)
-        print(sum(bws))
         return uploads
