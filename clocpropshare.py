@@ -112,35 +112,37 @@ class ClocPropShare(Peer):
             # change my internal state for no reason
             self.dummy_state["cake"] = "pie"
 
-            #request = random.choice(requests)
             chosen = []
             bws= []
-            # Evenly "split" my upload bandwidth among the one chosen requester
-            #bws = even_split(self.up_bw, len(chosen))
 
             requester_l = [r.requester_id for r in requests]
+            print("###########")
+            print(requester_l)
             last_round = history.downloads[round-1]
             print(history.downloads[round-1])
             non_share = []
-            #sum([o.blocks for o in last_round] ==0
 
-            if round == 0 or list(set(requester_l) & set(ob.to_id for ob in last_round)) == []: 
+            #if round is 0 or no intersection between last round downloaders and requesters
+            if round == 0 or list(set(requester_l) & set([ob.from_id for ob in last_round])) == []: 
                 print("---------------------------")
                 print(round)
-                print(list(set(requester_l) & set(ob.to_id for ob in last_round)))
-                chosen = [random.sample([r.requester_id for r in requests], min(len(requests), 4))] #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
+                print(list(set(requester_l) & set(ob.from_id for ob in last_round)))
+                chosen = random.sample([r.requester_id for r in requests], min(len(requests), 4)) #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
                 bws = even_split(self.up_bw, len(chosen)) 
+                #import pdb; pdb.set_trace();
             else: 
-                import pdb; pdb.set_trace();
+                #import pdb; pdb.set_trace();
                 for obj in last_round: 
-                    if obj.to_id in requester_l: 
+                    if obj.from_id in requester_l: 
                         allocate_bw = ((obj.blocks/sum([o.blocks for o in last_round]))*0.9)
-                        chosen.append(obj.to_id)
+                        chosen.append(obj.from_id)
                         bws.append(math.floor(self.up_bw * allocate_bw))
                     else: 
-                        non_share.append(obj.to_id)
-                chosen.append(random.choice(non_share))
-                bws.append(math.floor(0.1*self.up_bw))
+                        non_share.append(obj.from_id)
+                #what id share everything - would this be the error?
+                if non_share != []: 
+                    chosen.append(random.choice(non_share))
+                    bws.append(math.floor(0.1*self.up_bw))
 
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
