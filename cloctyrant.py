@@ -19,8 +19,6 @@ class ClocTyrant(Peer):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
-        self.d  = {}#big dictionary of keys with their respective rates --> how to initialize it by 10
-        self.u = {}
         self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
         self.alpha = 0.2
         self.r = 3 
@@ -161,7 +159,6 @@ class ClocTyrant(Peer):
                 lost_bw = bws.pop()
                 while lost_bw < (sum_up - self.up_bw) and bws != []:
                     lost_bw = bws.pop()
-                #bws[0] += math.floor(sum_up - self.up_bw)
 
             # update the estimates of upload and download rates
             for (pid, _rate_dict) in self.peer_ratios.items():
@@ -180,14 +177,9 @@ class ClocTyrant(Peer):
                     # update based on the amount of observed download rates
                     downloads_from_peer = [d for d in history.downloads[round-1] if d.from_id == pid]
                     total_blocks = len(set([d.blocks for d in downloads_from_peer])) 
-                    self.peer_ratios[pid]["d"] += ((self.peer_ratios[pid]["d"]) -
-                    (round/(round-1)**2) + (total_blocks/(round-1)))/(round/(round-1)) 
-                    # I worked out this math . . . image of logic attached in the write-up
-                    # denominator of previous rate value will always be current_round-1
-                    # I want to add the rate in blocks/round to the old rate in order to update the download rate
-                    # I recognize the simpler method is to say: self.peer_ratios[pid]["d"] = total_blocks/(round - 1)
-                    # this experimentally did not make a big difference in performance, though
-                    # so for the sake of my pride I am keeping the more complicated version here
+                    # self.peer_ratios[pid]["d"] += ((self.peer_ratios[pid]["d"]) -
+                    # (round/(round-1)**2) + (total_blocks/(round-1)))/(round/(round-1)) 
+                    self.peer_ratios[pid]["d"] = total_blocks/(round - 1)
                 if unchoked_metr_bool:
                     self.peer_ratios[pid]["u"] *= (1 - self.gamma)
         # create actual uploads out of the list of peer ids and bandwidths
