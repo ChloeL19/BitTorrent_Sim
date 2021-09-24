@@ -14,9 +14,7 @@ from util import even_split
 from peer import Peer
 
 class ClocStd(Peer):
-# rarest first (lowest availability) 
-#reciprocation (reciprocation probability- peer j will unchoke i for a particular choice of upload bandwidth offered by i- depend on the behaviour of other peers)
-#optimistic unchoking (every 30 seconds an additional slot to a random peer in the neighbourhood)
+
     def post_init(self):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
@@ -50,33 +48,26 @@ class ClocStd(Peer):
         requests = []   # We'll put all the things we want here
         # Symmetry breaking is good...
 
-        #NO FREQUENCY ESTIMATION
-        #REQUEST FILES OWNED BY FEW PEOPLE
         random.shuffle(needed_pieces)
         av_dict = {} # count of other peers with this piece
         
+        #create an array - loop through keys from dict- whoever has most rare piece first in array. 
         for np in np_set: 
             peers_with_piece = 0
             for p in peers:
                 if np in p.available_pieces:
                     peers_with_piece += 1
-            av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array. 
+            av_dict[np] = peers_with_piece 
 
-        peers.sort(key=lambda p: p.id) ## I want to sort on list_key
-
-        # request all available pieces from all peers!
-        # (up to self.max_requests from each)
         for peer in peers:
             av_set = set(peer.available_pieces)
-            isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
-            n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
+            isect = av_set.intersection(np_set) 
+            n = min(self.max_requests, len(isect)) 
             il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
-            # This would be the place to try fancier piece-requesting strategies
-            # to avoid getting the same thing from multiple peers at a time. ADD HERE
-            for piece_id in random.sample(il, n): #DO YOU MEAN CHANGING THIS???
+            for piece_id in random.sample(il, n): 
                 # aha! The peer has this piece! Request it.
                 # which part of the piece do we need next?
                 # (must get the next-needed blocks in order)

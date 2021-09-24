@@ -19,7 +19,7 @@ class ClocTyrant(Peer):
         print(("post_init(): %s here!" % self.id))
         self.dummy_state = dict()
         self.dummy_state["cake"] = "lie"
-        self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
+        self.gamma = 0.1 
         self.alpha = 0.2
         self.r = 3 
         self.S = 4
@@ -65,8 +65,8 @@ class ClocTyrant(Peer):
 
         for peer in peers:
             av_set = set(peer.available_pieces)
-            isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
-            n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
+            isect = av_set.intersection(np_set) 
+            n = min(self.max_requests, len(isect)) 
             il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
@@ -136,7 +136,7 @@ class ClocTyrant(Peer):
             sum_up = 0
             counter = 0
             # FIXME: STILL EXCEEDING BANDWIDTH HERE!!!
-            #import pdb; pdb.set_trace();
+            
             while sum_up < self.up_bw and \
                 counter < len(requester_ratios_sorted):
                 pid = requester_ratios_sorted[counter][0]
@@ -177,8 +177,6 @@ class ClocTyrant(Peer):
                     # update based on the amount of observed download rates
                     downloads_from_peer = [d for d in history.downloads[round-1] if d.from_id == pid]
                     total_blocks = len(set([d.blocks for d in downloads_from_peer])) 
-                    # self.peer_ratios[pid]["d"] += ((self.peer_ratios[pid]["d"]) -
-                    # (round/(round-1)**2) + (total_blocks/(round-1)))/(round/(round-1)) 
                     self.peer_ratios[pid]["d"] = total_blocks/(round - 1)
                 if unchoked_metr_bool:
                     self.peer_ratios[pid]["u"] *= (1 - self.gamma)

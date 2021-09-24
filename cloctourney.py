@@ -56,28 +56,23 @@ class ClocTourney(Peer):
         random.shuffle(needed_pieces)
         av_dict = {} # count of other peers with this piece
         
+        #create an array - loop through keys from dict- whoever has most rare piece first in array.
         for np in np_set: 
             peers_with_piece = 0
             for p in peers:
                 if np in p.available_pieces:
                     peers_with_piece += 1
-            av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array.         
-        # Sort peers by id.  This is probably not a useful sort, but other 
-        # sorts might be useful
-        peers.sort(key=lambda p: p.id)
-        # request all available pieces from all peers!
-        # (up to self.max_requests from each)
+            av_dict[np] = peers_with_piece          
+
         for peer in peers:
             av_set = set(peer.available_pieces)
-            isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
-            n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
+            isect = av_set.intersection(np_set) 
+            n = min(self.max_requests, len(isect)) 
             il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
-            # This would be the place to try fancier piece-requesting strategies
-            # to avoid getting the same thing from multiple peers at a time. ADD HERE
-            for piece_id in random.sample(il, n): #DO YOU MEAN CHANGING THIS???
+            for piece_id in random.sample(il, n): 
                 # aha! The peer has this piece! Request it.
                 # which part of the piece do we need next?
                 # (must get the next-needed blocks in order)
@@ -146,7 +141,7 @@ class ClocTourney(Peer):
             sum_up = 0
             counter = 0
             # FIXME: STILL EXCEEDING BANDWIDTH HERE!!!
-            #import pdb; pdb.set_trace();
+            
             while sum_up < self.up_bw and \
                 counter < len(requester_ratios_sorted):
                 pid = requester_ratios_sorted[counter][0]
