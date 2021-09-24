@@ -107,7 +107,6 @@ class ClocPropShare(Peer):
             logging.debug("No one wants my pieces!")
             chosen = []
             bws = []
-            print("OOOOOOOOOOOOOOOO")
         else:
             logging.debug("Still here: uploading to a random peer")
             # change my internal state for no reason
@@ -121,23 +120,25 @@ class ClocPropShare(Peer):
 
             requester_l = [r.requester_id for r in requests]
             last_round = history.downloads[round-1]
+            print(history.downloads[round-1])
             non_share = []
-            print("------------------------")
-            print(sum([o.blocks for o in last_round]))
             #sum([o.blocks for o in last_round] ==0
 
-            if round == 0 or list(set(requester_l) & set(ob.from_id for ob in last_round)) == [] : 
-                print("############")
+            if round == 0 or list(set(requester_l) & set(ob.to_id for ob in last_round)) == []: 
+                print("---------------------------")
+                print(round)
+                print(list(set(requester_l) & set(ob.to_id for ob in last_round)))
                 chosen = [random.sample([r.requester_id for r in requests], min(len(requests), 4))] #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
                 bws = even_split(self.up_bw, len(chosen)) 
             else: 
+                import pdb; pdb.set_trace();
                 for obj in last_round: 
-                    if obj.from_id in requester_l: 
+                    if obj.to_id in requester_l: 
                         allocate_bw = ((obj.blocks/sum([o.blocks for o in last_round]))*0.9)
-                        chosen.append(obj.from_id)
+                        chosen.append(obj.to_id)
                         bws.append(math.floor(self.up_bw * allocate_bw))
                     else: 
-                        non_share.append(obj.from_id)
+                        non_share.append(obj.to_id)
                 chosen.append(random.choice(non_share))
                 bws.append(math.floor(0.1*self.up_bw))
 
