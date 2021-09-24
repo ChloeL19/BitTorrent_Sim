@@ -8,7 +8,7 @@
 
 import random
 import logging
-
+import math
 from messages import Upload, Request
 from util import even_split
 from peer import Peer
@@ -46,6 +46,9 @@ class ClocPropShare(Peer):
 
         requests = []   # We'll put all the things we want here
         # Symmetry breaking is good...
+
+        #NO FREQUENCY ESTIMATION
+        #REQUEST FILES OWNED BY FEW PEOPLE
         random.shuffle(needed_pieces)
         av_dict = {} # count of other peers with this piece
         
@@ -54,10 +57,10 @@ class ClocPropShare(Peer):
             for p in peers:
                 if np in p.available_pieces:
                     peers_with_piece += 1
-            av_dict[np] = peers_with_piece 
-        # Sort peers by id.  This is probably not a useful sort, but other 
-        # sorts might be useful
-        peers.sort(key=lambda p: p.id)
+            av_dict[np] = peers_with_piece #create an array - loop through keys from dict- whoever has most rare piece first in array. 
+
+        peers.sort(key=lambda p: p.id) ## I want to sort on list_key
+
         # request all available pieces from all peers!
         # (up to self.max_requests from each)
         for peer in peers:
@@ -115,43 +118,51 @@ class ClocPropShare(Peer):
 
             request = random.choice(requests) # what is this saying, should my sect_id use this?
             #chosen = [request.requester_id] # change this i think to intersection of peer ids -> [sect_id]
-            # Evenly "split" my upload bandwidth among the one chosen requester
 
             #CHECK UNITS 
             down_hist = history.downloads[round - 1] 
             totals = 0 
-            new_bws = []
             chosen = []
+            #list of requesters not in downloaders
             non_share = []
+            #list of all shared requesters and downloaders
+            d_id = []
+            #list of requester ids
             req = [r.requester_id for r in requests]
+
+            ##calculate denominator: total blocks, make list of shared peer_id in download and request
             for d in down_hist: 
                 if d.from_id in req: 
                     totals += d.blocks
-                else: non_share.append(d.from_id)
-            if round == 0 or down_hist == [] or len(requests) == 0:
-                chosen = peers #is it peers or r.requester_id for r in requests
+                    d_id.append(d)
+            
+            #if round 0, no requests, denominator 0, download is nothing
+            if round == 0 or down_hist == [] or totals == 0 or d_id == []:
+                chosen = [random.sample([r.requester_id for r in requests], 4)] #is it peers or r.requester_id for r in requests --> gets error:chosen = [request.requester_id]
                 bws = even_split(self.up_bw, len(chosen))
-            for peer in down_hist:
-                allocate_bw = int((peer.blocks/totals) * 0.9) #don't hardcode- what do we want to set the value to? also are these all floats
-                new_bws.append(self.up_bw * allocate_bw)
-                chosen.append(peer)
+            else: 
+                for peer in down_hist:
+                    if peer.from_id in req: 
+                        # check if peer a requester 
+                        allocate_bw = (peer.blocks/totals) * 0.9 #don't hardcode- what do we want to set the value to? also are these all floats
+                        bws.append(math.floor(self.up_bw * allocate_bw))
+                        chosen.append(peer.from_id)
 
+            #optimistically unchoke 
+            for r in req: 
+                if r not in d_id:
+                     non_share.append(r)
+            #what is non_share is empty 
+            if non_share != []:
+                op_id = random.choice(non_share)
+                chosen.append(op_id)
+                opt_bw = math.floor(0.1 * self.up_bw)
+                bws.append(opt_bw)
 
-            ## do you think peer in chosen and bandwidths will correspond to each other as 
-            ## they are added to diff parts 
-            op_id = random.choice(non)
-            chosen.append(op_id)
-            opt_bw = int(0.1 * self.up_bw) 
-            new_bws.append(opt_bw)
-
-    #checking for when requests is 0, checking if download history ( I didn't download from anyone) is greater than 0 and length (length of current requests) is greater than 0, in case first round optimistically unchoke everyone
-    #there is no requesters or the previous round had no downloads. 
-    #check if download history greater than 0 - if i didn't download from anyone in previous round 
-
-    # create actual uploads out of the list of peer ids and bandwidths
-    #bws --> new_bws
-    #chosen --> chosen  
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]
-            
+        print(requests)
+        print(uploads)
+        print(self.up_bw)
+        print(sum(bws))
         return uploads
