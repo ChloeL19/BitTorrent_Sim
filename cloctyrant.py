@@ -7,6 +7,7 @@
 # probably get rid of the silly logging messages, and then add more logic.
 
 import random
+import math
 import logging
 
 from messages import Upload, Request
@@ -23,6 +24,8 @@ class ClocTyrant(Peer):
         self.gamma = 0.1 #change in utils #CHECK DATA TYPES 
         self.alpha = 0.2
         self.r = 3 
+        self.S = 4
+        self.peer_ratios = {} # keys: peer ids, values: {"u": upload rate, "d": download rate}
     
     def requests(self, peers, history):
         """
@@ -62,23 +65,15 @@ class ClocTyrant(Peer):
                     peers_with_piece += 1
             av_dict[np] = peers_with_piece
 
-
-        # Sort peers by id.  This is probably not a useful sort, but other 
-        # sorts might be useful
-        peers.sort(key=lambda p: p.id)
-        # request all available pieces from all peers!
-        # (up to self.max_requests from each)
         for peer in peers:
             av_set = set(peer.available_pieces)
             isect = av_set.intersection(np_set) #intersection between available pieces and needed pieces 
             n = min(self.max_requests, len(isect)) #need this but what do you do with isect 
-            il = [isect]# create isect list
+            il = list(isect)# create isect list
             random.shuffle(il)# randomly shuffle isect list
             sorted(il, key=lambda x: av_dict[x])# sort isect list based on av_dict
 
-            # This would be the place to try fancier piece-requesting strategies
-            # to avoid getting the same thing from multiple peers at a time. ADD HERE
-            for piece_id in random.sample(il, n): #DO YOU MEAN CHANGING THIS???
+            for piece_id in random.sample(il, n): 
                 # aha! The peer has this piece! Request it.
                 # which part of the piece do we need next?
                 # (must get the next-needed blocks in order)
@@ -105,10 +100,6 @@ class ClocTyrant(Peer):
         round = history.current_round()
         logging.debug("%s again.  It's round %d." % (
             self.id, round))
-        # One could look at other stuff in the history too here.
-        # For example, history.downloads[round-1] (if round != 0, of course)
-        # has a list of Download objects for each Download to this peer in
-        # the previous round.
 
         if len(requests) == 0:
             logging.debug("No one wants my pieces!")
@@ -116,46 +107,88 @@ class ClocTyrant(Peer):
             bws = []
         else:
             logging.debug("Still here: uploading to a random peer")
-            # change my internal state for no reason
-            self.dummy_state["cake"] = "pie"
+            # filler value for peers for whom we have no historical data: 1, assume perfect collab
+            # divide the upload and download rates to get the ratios
+            requester_ratios = {} # keys: requester ids, values: requester ratios
+            random.shuffle(requests) # break symmetries again with random shuffling, for extra safety
+            for r in requests:
+                # if not in peer_ratios already, initialize their values in peer_ratios
+                if r.requester_id not in self.peer_ratios.keys(): 
+                    blocks_uploaded_lst = [] # amount of blocks uploaded to this requester in past
+                    for rnd in history.uploads:
+                        if rnd != []:
+                            blocks_uploaded_lst += [u.bw for u in rnd if u.to_id == r.requester_id]
+                    # initialize values of u and d
+                    self.peer_ratios[r.requester_id] = {"u": 1, "d": 1}
+                    if len(blocks_uploaded_lst) != 0:
+                        self.peer_ratios[r.requester_id]["u"] = (len(blocks_uploaded_lst)/round)/4
+                        self.peer_ratios[r.requester_id]["d"] = (len(blocks_uploaded_lst)/round)/4
 
-            request = random.choice(requests)
-            chosen = [request.requester_id]
-            # Evenly "split" my upload bandwidth among the one chosen requester
-            bws = even_split(self.up_bw, len(chosen))
+                requester_ratios[r.requester_id] = self.peer_ratios[r.requester_id]\
+                        ["d"]/self.peer_ratios[r.requester_id]["u"]  
 
-        + #list of what round it is and how much given in total- average - this should be dynamic upload rate 
-            #based on average download rate of standard clients 
-            capij = self.up_bw #is this max??
+            # sort this dictionary in descending order, get list of tuples (requester_id, ratio)
+            requester_ratios_sorted = sorted(requester_ratios.items(), key=lambda x: x[1], \
+                reverse=True)
+            # Now we allocate according to this order 
+            # we allocate the denomiator of each ratio
+            # until we hit the max cap, or until we hit the end of all requesters
+            chosen = []
+            bws = []
+            sum_up = 0
+            counter = 0
+            # FIXME: STILL EXCEEDING BANDWIDTH HERE!!!
+            while sum_up < self.up_bw and \
+                counter < len(requester_ratios_sorted):
+                pid = requester_ratios_sorted[counter][0]
+                peer_bw = self.peer_ratios[pid]["u"]
+                if peer_bw > 0:
+                    chosen.append(pid)
+                    bws.append(peer_bw)
+                sum_up += peer_bw
+                counter += 1
 
-            if round = 0: 
-                for peer in peers: 
-                    self.u = self.up_bw/self.S #4
-                    self.d = self.up_bw/self.S
+            # assumption: if there is any bandwidth remainder, give it all to the top ranked peer
+            if sum_up < self.up_bw:
+                bws[0] += math.floor(self.up_bw - sum_up)
 
-            div_dict = {k: float(self.d[k])/self.u[k] for k in self.d}
-            sorted_peers = {k: v for k, v in sorted(div_dict.items(), key=lambda x: x[1])}
-            sum_up = 0 
-            kpeer = []
-            for peer in sorted_peers.keys(): 
-                if sum_up > capij:
+            # assumptiopn: clean up: it's possible with this loop structure to over-allocate bandwidth
+            # remove extra bandwidth by deleting the agents with least amount
+            # this will also overshoot slightly in some cases . . . add back bandwidth to top
+            # agent again so we use exactly all of it
+            if sum_up > self.up_bw:
+                lost_bw = bws.pop()
+                while lost_bw < (sum_up - self.up_bw) and bws != []:
+                    lost_bw = bws.pop()
+                bws[0] += sum_up - self.up_bw
 
-                    break 
-                sum_up += sorted_peers[peer]
-                kpeer.append(peer)
-            #need to unchoke peers 1 to k for which 
-
-            for pr in peers: 
-                downhist = history.download[round - 1]
-                if pr in downhist.keys(): 
-                    SOMETHING 
-                elif round => self.r: #greater than r: 
-                    self.u = (1 + self.alpha)self.u
-                #upload_hist = self.uploads[round - 1]
-                #upload_hist.keys()
-                else:#the number of times been unchoked less than 3- download rate is rate from last round i think: 
-                    self.d = download
-
+            # update the estimates of upload and download rates
+            for (pid, _rate_dict) in self.peer_ratios.items():
+                # boolean indicator for whether peer unchoked me in last round
+                unchoked_met1_bool = (pid in [d.from_id for d in history.downloads[round-1]])
+                # now create a bool to indicate whether this peer unchoked me in the last r periods
+                unchoked_metr_bool = True
+                for r in range(round, max(0, round-self.r)): 
+                    if pid not in [d.from_id for d in history.downloads[r]]:
+                        unchoked_metr_bool = False
+                
+                # update as described in textbook
+                if not unchoked_met1_bool:
+                    self.peer_ratios[pid]["u"] *= (1 + self.alpha)
+                if unchoked_met1_bool:
+                    # update based on the amount of observed download rates
+                    downloads_from_peer = [d for d in history.downloads[round-1] if d.from_id == pid]
+                    total_blocks = len(set([d.blocks for d in downloads_from_peer])) 
+                    self.peer_ratios[pid]["d"] += ((self.peer_ratios[pid]["d"]) -
+                    (round/(round-1)**2) + (total_blocks/(round-1)))/(round/(round-1)) 
+                    # I worked out this math . . . image of logic attached in the write-up
+                    # denominator of previous rate value will always be current_round-1
+                    # I want to add the rate in blocks/round to the old rate in order to update the download rate
+                    # I recognize the simpler method is to say: self.peer_ratios[pid]["d"] = total_blocks/(round - 1)
+                    # this experimentally did not make a big difference in performance, though
+                    # so for the sake of my pride I am keeping the more complicated version here
+                if unchoked_metr_bool:
+                    self.peer_ratios[pid]["u"] *= (1 - self.gamma)
         # create actual uploads out of the list of peer ids and bandwidths
         uploads = [Upload(self.id, peer_id, bw)
                    for (peer_id, bw) in zip(chosen, bws)]

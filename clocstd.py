@@ -105,11 +105,13 @@ class ClocStd(Peer):
         # has a list of Download objects for each Download to this peer in
         # the previous round.
 
+        # FIXME: consider holding randomly unchoked agents for three rounds
+
         # helper function
         def sort_requesters():
             '''
             Returns a sorted list of tuples [greatest --> least] of (requester ids, upload rates).
-            Only computes these estimates for 10 rounds of history.
+            Only computes these estimates for all available rounds of history.
             '''
             # create a dict of peers that have let us download in the full history
             friends = {} # key is peer id, value is number of blocks downloaded across all rounds

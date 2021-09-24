@@ -34,9 +34,6 @@ class Download:
     def __repr__(self):
         return "Download(from_id=%s, to_id=%s, piece=%d, blocks=%d)" % (
             self.from_id, self.to_id, self.piece, self.blocks)
-
-
-
             
 class PeerInfo:
     """
