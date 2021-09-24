@@ -123,29 +123,6 @@ class ClocPropShare(Peer):
             new_bws = []
             chosen = []
             non_share = []
-            d_id = []
-            for d in down_hist: 
-                d_id.append(d.from_id)
-            req = set([r.requester_id for r in requests])
-            sect_id = req.intersection(set(d_id))
-
-
-            if round == 0 or d_id == [] or len(requests) == 0:
-                chosen = peers #is it peers or r.requester_id for r in requests
-                bws = even_split(self.up_bw, len(chosen))
-            
-
-
-
-
-
-
-
-            down_hist = history.downloads[round - 1] 
-            totals = 0 
-            new_bws = []
-            chosen = []
-            non_share = []
             req = [r.requester_id for r in requests]
             for d in down_hist: 
                 if d.from_id in req: 
